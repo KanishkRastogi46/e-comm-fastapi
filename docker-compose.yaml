@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  db:
+    image: mongo:latest
+    container_name: e-commerce-db
+    env_file:
+      - .env
+    environment:
+      - MONGODB_URI=${MONGODB_URI}
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db

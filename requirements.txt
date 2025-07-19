@@ -1,0 +1,7 @@
+fastapi
+pydantic
+uvicorn
+python-dotenv
+pymongo[srv]==3.12
+loguru
+mongoengine
