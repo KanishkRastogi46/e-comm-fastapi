@@ -4,8 +4,6 @@ import uvicorn
 from dotenv import load_dotenv
 import os
 from loguru import logger
-from pathlib import Path
-import sys
 from uuid import uuid4
 
 from src.db import connect_db, disconnect_db
@@ -25,12 +23,7 @@ from src.routers import products, orders
 app.include_router(products.router)
 app.include_router(orders.router)
 
-config = {
-    'handlers': [
-        {'sink': sys.stdout, 'level': 'INFO', 'colorize': True, 'format':"<green>{time}</green> | <blue>{level}</blue> | <level>{message}</level>"},
-        {'sink': Path(__file__).parent.parent / 'logs' / 'app.log', 'level': 'DEBUG', 'rotation': '1 MB', 'compression': 'zip', 'format': '{time} | {level} | {message}'}
-    ]
-}
+from src.logging import config
 logger.configure(**config)
 
 @app.on_event("startup")

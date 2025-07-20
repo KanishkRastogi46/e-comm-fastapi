@@ -7,8 +7,8 @@ class RequestQueryParams(BaseModel):
     
     name: Optional[str] = Field(default=None, description="Name of the product")
     size: Optional[str | int] = Field(default=None, description="Size of the product")
-    limit: Optional[int] = Field(default=None, description="Number of items to return per page")
-    offset: Optional[int] = Field(default=None, description="Number of items to skip for pagination")
+    limit: Optional[int] = Field(default=10, description="Number of items to return per page")
+    offset: Optional[int] = Field(default=0, description="Number of items to skip for pagination")
 
 
 class CreateProductsRequest(BaseModel):

@@ -10,7 +10,7 @@ from src.schemas.requests_schema import CreateOrdersRequest, RequestQueryParams
 load_dotenv()
 
 router = APIRouter(
-    prefix=f"/{os.environ.get("API_PREFIX")}/orders",
+    prefix=f'{os.environ.get("API_PREFIX")}/orders',
     tags=["orders"],
 )
 

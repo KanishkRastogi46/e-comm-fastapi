@@ -8,7 +8,7 @@ from src.schemas.requests_schema import CreateProductsRequest, RequestQueryParam
 load_dotenv()
 
 router = APIRouter(
-    prefix=f"/{os.environ.get("API_PREFIX")}/products",
+    prefix=f'{os.environ.get("API_PREFIX")}/products',
     tags=["products"],
 )
 
@@ -43,8 +43,8 @@ async def list_products(queryParams: RequestQueryParams = Query()):
     try:
         name = queryParams.name
         size = queryParams.size
-        limit = queryParams.limit if queryParams.limit else 10
-        offset = queryParams.offset if queryParams.offset else 0
+        limit = queryParams.limit
+        offset = queryParams.offset
 
         # Start with all products
         query = Products.objects.all()
