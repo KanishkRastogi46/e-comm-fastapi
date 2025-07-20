@@ -6,11 +6,12 @@ import os
 from src.models.orders import Orders, OrderItems
 from src.models.products import Products
 from src.schemas.requests_schema import CreateOrdersRequest, RequestQueryParams
+from src.schemas.response_schema import ListOrdersResponse, CreateOrdersResponse
 
 load_dotenv()
 
 router = APIRouter(
-    prefix=f'{os.environ.get("API_PREFIX")}/orders',
+    prefix='/orders',
     tags=["orders"],
 )
 
@@ -47,7 +48,7 @@ async def create_order(order: CreateOrdersRequest):
         raise HTTPException(status_code=500, detail="Failed to create order")
     
 
-@router.get("/{userId}", status_code=status.HTTP_200_OK)
+@router.get("/{userId}", status_code=status.HTTP_200_OK, response_model=ListOrdersResponse)
 async def list_orders_by_userId(userId: str, queryParams: RequestQueryParams = Query()):
     """
     List orders for a specific user with optional pagination.

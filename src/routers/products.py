@@ -4,16 +4,17 @@ from dotenv import load_dotenv
 import os
 from src.models.products import Products
 from src.schemas.requests_schema import CreateProductsRequest, RequestQueryParams
+from src.schemas.response_schema import ListProductsResponse, CreateProductsResponse
 
 load_dotenv()
 
 router = APIRouter(
-    prefix=f'{os.environ.get("API_PREFIX")}/products',
+    prefix='/products',
     tags=["products"],
 )
 
 
-@router.post("/", status_code=status.HTTP_201_CREATED)
+@router.post("/", status_code=status.HTTP_201_CREATED, response_model=CreateProductsResponse)
 async def create_product(product: CreateProductsRequest):
     """
     Create a new product.
@@ -35,7 +36,7 @@ async def create_product(product: CreateProductsRequest):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create product")
     
     
-@router.get("/", status_code=status.HTTP_200_OK)
+@router.get("/", status_code=status.HTTP_200_OK, response_model=ListProductsResponse)
 async def list_products(queryParams: RequestQueryParams = Query()):
     """
     List products with optional filtering by name and size.
