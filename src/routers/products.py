@@ -1,9 +1,8 @@
 from fastapi import APIRouter, status, HTTPException, Query
 from loguru import logger
 from dotenv import load_dotenv
-import os
 from src.models.products import Products
-from src.schemas.requests_schema import CreateProductsRequest, RequestQueryParams
+from src.schemas.requests_schema import CreateProductsRequest, ProductsRequestQueryParams, ProductSizes
 from src.schemas.response_schema import ListProductsResponse, CreateProductsResponse
 
 load_dotenv()
@@ -23,11 +22,34 @@ async def create_product(product: CreateProductsRequest):
         if not product.name or not product.price or not product.sizes:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid product data")
         
-        is_product_exists = Products.objects(name=product.name.lower()).first()
+        # Validate sizes data
+        try:
+            from src.models.products import Sizes, SizesEnum
+            validated_sizes = []
+            total_quantity = 0
+            
+            for size_data in product.sizes:
+                # Validate size enum
+                size_enum = SizesEnum(str(size_data.size).lower())
+                quantity = int(size_data.quantity)
+                
+                if quantity < 0:
+                    raise ValueError("Quantity must be non-negative")
+                
+                validated_sizes.append(Sizes(size=size_enum, quantity=quantity))
+                total_quantity += quantity
+        except (ValueError, AttributeError) as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, 
+                detail=f"Invalid sizes data: {str(e)}"
+            )
+        
+        # Check for existing product (case-insensitive)
+        is_product_exists = Products.objects(name__iexact=product.name).first()
         if is_product_exists:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Product with this name already exists")
         
-        new_product = Products(name=product.name, price=product.price, sizes=product.sizes)
+        new_product = Products(name=product.name, price=product.price, sizes=validated_sizes, total_quantity=total_quantity)
         new_product.save()
         logger.info(f"Product created successfully: {new_product.id}")
         return {"id": str(new_product.id)}
@@ -37,7 +59,7 @@ async def create_product(product: CreateProductsRequest):
     
     
 @router.get("/", status_code=status.HTTP_200_OK, response_model=ListProductsResponse)
-async def list_products(queryParams: RequestQueryParams = Query()):
+async def list_products(queryParams: ProductsRequestQueryParams = Query()):
     """
     List products with optional filtering by name and size.
     """
@@ -50,13 +72,23 @@ async def list_products(queryParams: RequestQueryParams = Query()):
         # Start with all products
         query = Products.objects.all()
         
-        # Apply name filter if provided (with regex support for partial matching)
+        # Apply name filter if provided (case-insensitive partial matching)
         if name:
-            query = query.filter(name__icontains=name.lower())
+            query = query.filter(name__icontains=name)
         
         # Apply size filter if provided
         if size:
-            query = query.filter(sizes__in=[size])
+            # Validate size enum value
+            try:
+                from src.models.products import SizesEnum
+                size_enum = SizesEnum(str(size).lower())
+                # Filter products that have the specified size in their sizes list
+                query = query.filter(sizes__size=size_enum)
+            except ValueError:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST, 
+                    detail=f"Invalid size value. Must be one of: {[s.value for s in SizesEnum]}"
+                )
         
         # Get total count before pagination
         total_count = query.count()

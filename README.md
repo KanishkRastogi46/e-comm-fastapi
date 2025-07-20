@@ -134,6 +134,8 @@ E-commerce-fastapi/
 - **Error Handling**: Consistent and informative error responses
 - **Dockerization**: Easy deployment with Docker
 - **Logging**: Structured logging for monitoring
+- **CORS**: Cross-Origin Resource Sharing for frontend integration
+- **GZip**: GZip compression for reducing response size
 
 ---
 

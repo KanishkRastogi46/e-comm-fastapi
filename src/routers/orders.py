@@ -2,10 +2,10 @@ from fastapi import APIRouter, HTTPException, Query, status
 from loguru import logger
 from bson import ObjectId
 from dotenv import load_dotenv
-import os
+from datetime import datetime
 from src.models.orders import Orders, OrderItems
 from src.models.products import Products
-from src.schemas.requests_schema import CreateOrdersRequest, RequestQueryParams
+from src.schemas.requests_schema import CreateOrdersRequest, OrdersRequestQueryParams
 from src.schemas.response_schema import ListOrdersResponse, CreateOrdersResponse
 
 load_dotenv()
@@ -25,21 +25,46 @@ async def create_order(order: CreateOrdersRequest):
         if not order.userId or not order.items:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid order data")
         
+        # Validate and convert userId to int if needed
+        try:
+            user_id = int(order.userId)
+        except (ValueError, TypeError):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="userId must be a valid integer")
+        
         items = []
+        processed_products = set()  # Track processed products to avoid duplicates
+        
         for item in order.items:
-            if not item.get("productId") or not item.get("quantity"):
+            if not item.productId or not item.quantity:
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid item data")
-            product = Products.objects(id=ObjectId(item["productId"])).first()
-            if not product:
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Product with id {item['productId']} not found")
-            if item["quantity"] < 1:
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Quantity must be at least 1")
-            if item["quantity"] > product.sizes[0]["quantity"]:
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Insufficient stock for the product")
-            order_item = OrderItems(productId=ObjectId(item["productId"]), quantity=item["quantity"])
-            items.append(order_item)
             
-        new_order = Orders(userId=order.userId, items=items)
+            # Check for duplicate products in the same order
+            if item.productId in processed_products:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Duplicate product {item.productId} in order")
+            
+            product = Products.objects(id=ObjectId(item.productId)).first()
+            if not product:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Product with id {item.productId} not found")
+            if item.quantity < 1:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Quantity must be at least 1")
+            # Check if product has sufficient stock using total_quantity
+            if item.quantity > product.total_quantity:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Insufficient stock for the product")
+            
+            # Create OrderItems with the product reference (not ObjectId)
+            order_item = OrderItems(productId=product, quantity=item.quantity)
+            items.append(order_item)
+            processed_products.add(item.productId)
+            
+            # Update product quantities (reduce stock)
+            product.total_quantity -= item.quantity
+            product.updated_at = datetime.now()
+            product.save()
+            
+        # Generate a default order name
+        order_name = f"Order-{user_id}-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+        
+        new_order = Orders(name=order_name, userId=user_id, items=items)
         new_order.save()
         logger.info(f"Order created successfully: {new_order.id}")
         return {"id": str(new_order.id)}
@@ -49,7 +74,7 @@ async def create_order(order: CreateOrdersRequest):
     
 
 @router.get("/{userId}", status_code=status.HTTP_200_OK, response_model=ListOrdersResponse)
-async def list_orders_by_userId(userId: str, queryParams: RequestQueryParams = Query()):
+async def list_orders_by_userId(userId: str, queryParams: OrdersRequestQueryParams = Query()):
     """
     List orders for a specific user with optional pagination.
     """
@@ -79,8 +104,8 @@ async def list_orders_by_userId(userId: str, queryParams: RequestQueryParams = Q
             total_price = 0.0
             
             for item in order.items:
-                # Get product details
-                product = Products.objects(id=item.productId).first()
+                # Get product details - item.productId is already a reference
+                product = item.productId
                 if product:
                     product_details = {
                         "id": str(product.id),

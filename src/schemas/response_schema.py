@@ -1,17 +1,17 @@
 from pydantic import BaseModel, Field, ConfigDict
-from typing import List, Dict, Optional
+from typing import List, Optional, Union
 
 
 class CreateProductsResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
     
-    id: str | int = Field(..., description="ID of the created product")
+    id: Union[str, int] = Field(..., description="ID of the created product")
     
     
 class CreateOrdersResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
     
-    id: str | int = Field(..., description="ID of the created order")
+    id: Union[str, int] = Field(..., description="ID of the created order")
 
 
 class PageInfo(BaseModel):
@@ -25,9 +25,10 @@ class PageInfo(BaseModel):
 class ProductItem(BaseModel):
     model_config = ConfigDict(extra="forbid")
     
-    id: str | int = Field(..., description="Product ID")
+    id: Union[str, int] = Field(..., description="Product ID")
     name: str = Field(..., description="Product name")
     price: float = Field(..., description="Product price")
+    total_quantity: int = Field(..., description="Total quantity available across all sizes")
 
 
 class ListProductsResponse(BaseModel):
@@ -40,7 +41,7 @@ class ListProductsResponse(BaseModel):
 class ProductDetails(BaseModel):
     model_config = ConfigDict(extra="forbid")
     
-    id: str | int = Field(..., description="Product ID")
+    id: Union[str, int] = Field(..., description="Product ID")
     name: str = Field(..., description="Product name")
 
 
@@ -54,7 +55,7 @@ class OrderItem(BaseModel):
 class OrderData(BaseModel):
     model_config = ConfigDict(extra="forbid")
     
-    id: str | int = Field(..., description="Order ID")
+    id: Union[str, int] = Field(..., description="Order ID")
     items: List[OrderItem] = Field(..., description="List of order items")
     totalPrice: float = Field(..., description="Total price of the order")
 

@@ -8,7 +8,7 @@ REQUEST BODY
     sizes: [
         {
             size: str,
-            quantity: int
+            qty: int
         }
     ]
 }

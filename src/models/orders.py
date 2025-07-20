@@ -8,6 +8,7 @@ class OrderItems(EmbeddedDocument):
     quantity = IntField(min_value=1, required=True)
 
 class Orders(Document):
+    name = StringField(required=False)  # Optional name field to match existing database schema
     userId = IntField(required=True)
     items = ListField(EmbeddedDocumentField(OrderItems), required=True)
     created_at = DateTimeField(default=datetime.now())
