@@ -36,7 +36,7 @@ class OrderItems(BaseModel):
     model_config = ConfigDict(extra="forbid")
     
     productId: Union[str, int] = Field(..., description="ID of the product")
-    quantity: int = Field(..., description="Quantity of the product")
+    qty: int = Field(..., description="Quantity of the product")
     
 class CreateOrdersRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")

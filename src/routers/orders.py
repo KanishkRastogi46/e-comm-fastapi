@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException, Query, status
+from typing import Union
+from fastapi import APIRouter, HTTPException, Path, Query, status
 from loguru import logger
 from bson import ObjectId
 from dotenv import load_dotenv
@@ -16,7 +17,7 @@ router = APIRouter(
 )
 
 
-@router.post("/", status_code=status.HTTP_201_CREATED)
+@router.post("/", status_code=status.HTTP_201_CREATED, response_model=CreateOrdersResponse)
 async def create_order(order: CreateOrdersRequest):
     """
     Create a new order.
@@ -35,7 +36,7 @@ async def create_order(order: CreateOrdersRequest):
         processed_products = set()  # Track processed products to avoid duplicates
         
         for item in order.items:
-            if not item.productId or not item.quantity:
+            if not item.productId or not item.qty:
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid item data")
             
             # Check for duplicate products in the same order
@@ -45,19 +46,19 @@ async def create_order(order: CreateOrdersRequest):
             product = Products.objects(id=ObjectId(item.productId)).first()
             if not product:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Product with id {item.productId} not found")
-            if item.quantity < 1:
+            if item.qty < 1:
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Quantity must be at least 1")
             # Check if product has sufficient stock using total_quantity
-            if item.quantity > product.total_quantity:
+            if item.qty > product.total_quantity:
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Insufficient stock for the product")
             
             # Create OrderItems with the product reference (not ObjectId)
-            order_item = OrderItems(productId=product, quantity=item.quantity)
+            order_item = OrderItems(productId=product, quantity=item.qty)
             items.append(order_item)
             processed_products.add(item.productId)
             
             # Update product quantities (reduce stock)
-            product.total_quantity -= item.quantity
+            product.total_quantity -= item.qty
             product.updated_at = datetime.now()
             product.save()
             
@@ -73,8 +74,8 @@ async def create_order(order: CreateOrdersRequest):
         raise HTTPException(status_code=500, detail="Failed to create order")
     
 
-@router.get("/{userId}", status_code=status.HTTP_200_OK, response_model=ListOrdersResponse)
-async def list_orders_by_userId(userId: str, queryParams: OrdersRequestQueryParams = Query()):
+@router.get("/{user_id}", status_code=status.HTTP_200_OK, response_model=ListOrdersResponse)
+async def list_orders_by_userId(user_id: Union[str, int] = Path(..., description="User ID"), queryParams: OrdersRequestQueryParams = Query()):
     """
     List orders for a specific user with optional pagination.
     """
@@ -83,11 +84,11 @@ async def list_orders_by_userId(userId: str, queryParams: OrdersRequestQueryPara
         offset = queryParams.offset
         
         # Validate userId
-        if not userId:
+        if not user_id:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User ID is required")
         
         # Start with orders for the specific user
-        query = Orders.objects(userId=userId)
+        query = Orders.objects(userId=user_id)
         
         # Get total count before pagination
         total_count = query.count()
@@ -112,8 +113,8 @@ async def list_orders_by_userId(userId: str, queryParams: OrdersRequestQueryPara
                         "name": product.name
                     }
                     items.append({
-                        "productDeails": product_details,
-                        "quantity": item.quantity
+                        "productDetails": product_details,
+                        "qty": item.quantity
                     })
                     # Calculate total price
                     total_price += product.price * item.quantity
@@ -121,14 +122,14 @@ async def list_orders_by_userId(userId: str, queryParams: OrdersRequestQueryPara
             data.append({
                 "id": str(order.id),
                 "items": items,
-                "totalPrice": total_price
+                "total": total_price
             })
         
         # Calculate pagination info
         next_offset = offset + limit if (offset + limit) < total_count else None
         previous_offset = offset - limit if offset > 0 else None
         
-        logger.info(f"Listed {len(data)} orders for user {userId}")
+        logger.info(f"Listed {len(data)} orders for user {user_id}")
         
         return {
             "data": data,
@@ -140,5 +141,5 @@ async def list_orders_by_userId(userId: str, queryParams: OrdersRequestQueryPara
         }
         
     except Exception as e:
-        logger.error(f"Error listing orders for user {userId}: {e}")
+        logger.error(f"Error listing orders for user {user_id}: {e}")
         raise HTTPException(status_code=500, detail="Failed to list orders")

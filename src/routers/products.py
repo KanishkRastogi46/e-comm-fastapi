@@ -69,6 +69,9 @@ async def list_products(queryParams: ProductsRequestQueryParams = Query()):
         limit = queryParams.limit
         offset = queryParams.offset
 
+        if not name and size:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Size filter requires name filter")
+        
         # Start with all products
         query = Products.objects.all()
         
@@ -83,7 +86,7 @@ async def list_products(queryParams: ProductsRequestQueryParams = Query()):
                 from src.models.products import SizesEnum
                 size_enum = SizesEnum(str(size).lower())
                 # Filter products that have the specified size in their sizes list
-                query = query.filter(sizes__size=size_enum)
+                query = query.filter(__raw__={"sizes": {"$elemMatch": {"size": size_enum.value}}})
             except ValueError:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST, 

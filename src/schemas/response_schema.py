@@ -28,7 +28,6 @@ class ProductItem(BaseModel):
     id: Union[str, int] = Field(..., description="Product ID")
     name: str = Field(..., description="Product name")
     price: float = Field(..., description="Product price")
-    total_quantity: int = Field(..., description="Total quantity available across all sizes")
 
 
 class ListProductsResponse(BaseModel):
@@ -48,8 +47,8 @@ class ProductDetails(BaseModel):
 class OrderItem(BaseModel):
     model_config = ConfigDict(extra="forbid")
     
-    productDeails: ProductDetails = Field(..., description="Product details")
-    quantity: int = Field(..., description="Quantity of the product")
+    productDetails: ProductDetails = Field(..., description="Product details")
+    qty: int = Field(..., description="Quantity of the product")
 
 
 class OrderData(BaseModel):
@@ -57,7 +56,7 @@ class OrderData(BaseModel):
     
     id: Union[str, int] = Field(..., description="Order ID")
     items: List[OrderItem] = Field(..., description="List of order items")
-    totalPrice: float = Field(..., description="Total price of the order")
+    total: float = Field(..., description="Total price of the order")
 
 
 class ListOrdersResponse(BaseModel):
