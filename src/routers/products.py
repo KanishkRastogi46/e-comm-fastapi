@@ -69,9 +69,6 @@ async def list_products(queryParams: ProductsRequestQueryParams = Query()):
         limit = queryParams.limit
         offset = queryParams.offset
 
-        if not name and size:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Size filter requires name filter")
-        
         # Start with all products
         query = Products.objects.all()
         
